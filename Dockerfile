@@ -14,9 +14,7 @@ COPY .env.example .env
 
 RUN npm run build
 
----
-
-### Étape 2 : Backend Laravel avec PHP-FPM
+# --- Étape 2 : Backend Laravel avec PHP-FPM ---
 FROM php:8.2-fpm
 
 WORKDIR /var/www
@@ -36,19 +34,17 @@ COPY . .
 # Copier les assets buildés par Vite
 COPY --from=node-builder /app/public/build /var/www/public/build
 
-# Droits corrects (important sur Railway ou Render)
+# Droits corrects
 RUN chown -R www-data:www-data /var/www && chmod -R 755 /var/www
 
-# Dépendances PHP
+# Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader
 
-# Clé Laravel
+# Générer la clé Laravel
 RUN cp .env.example .env && php artisan key:generate
 
-# Exposer le port
 EXPOSE 8000
 
-# Lancer les migrations + serveur PHP
 CMD php artisan migrate --force && \
     php artisan db:seed --force && \
     php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
