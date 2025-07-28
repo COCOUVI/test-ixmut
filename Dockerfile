@@ -1,3 +1,24 @@
+### Étape 1 : Build des assets frontend avec Vite
+FROM node:18 AS node-builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+
+COPY resources ./resources
+COPY vite.config.js ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+COPY public ./public
+
+# Créer un .env minimal pour le build
+RUN echo "APP_ENV=production" > .env
+
+RUN npm run build
+
+# Vérifier que le manifest existe
+RUN ls -la /app/public/build/manifest.json
+
 # --- Étape 2 : Backend Laravel avec PHP-FPM ---
 FROM php:8.2-fpm
 
@@ -12,16 +33,16 @@ RUN apt-get update && apt-get install -y \
 # Installer Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copier les fichiers Laravel (exclure node_modules et public/build)
-COPY --exclude=node_modules --exclude=public/build . .
+# Copier le backend Laravel (node_modules exclu par .dockerignore)
+COPY . .
 
-# Copier les assets buildés par Vite APRÈS
+# Copier les assets buildés par Vite
 COPY --from=node-builder /app/public/build /var/www/public/build
 
 # Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader
 
-# Droits corrects APRÈS avoir copié tous les fichiers
+# Droits corrects
 RUN chown -R www-data:www-data /var/www && chmod -R 755 /var/www
 
 # Générer la clé Laravel
